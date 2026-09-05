@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Modern, fast, and responsive Weather Forecast Web App with live data, 5-day forecast, hourly timeline, and dark/light themes.">
+  <meta name="theme-color" content="#0f172a">
+  <title>আবহবার্তা (AbohoBarta) | বাংলাদেশ লাইভ আবহাওয়া ও পূর্বাভাস</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Anti-FOUC Theme Initialization Script -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('abohobarta_theme') || localStorage.getItem('skypulse_theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <!-- Ambient Dynamic Weather Glow Background -->
+  <div class="ambient-glow" id="ambientGlow" aria-hidden="true"></div>
+  <div class="bg-particles" id="bgParticles" aria-hidden="true"></div>
+
+  <!-- Main Container -->
+  <div class="app-container">
+
+    <!-- Header & Navigation -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon-wrapper">
+          <i data-lucide="cloud-sun" class="brand-icon"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">আবহবার্তা <span class="brand-badge-bd">BD</span></span>
+          <span class="brand-subtitle">লাইভ আবহাওয়া ও ৮ বিভাগীয় পূর্বাভাস</span>
+        </div>
+      </div>
+
+      <!-- Search Bar Form -->
+      <form class="search-form" id="searchForm" role="search" aria-label="City search">
+        <div class="search-input-wrapper">
+          <i data-lucide="search" class="search-icon" aria-hidden="true"></i>
+          <input 
+            type="text" 
+            id="cityInput" 
+            class="search-input" 
+            placeholder="জেলা বা শহরের নাম লিখুন (যেমন: ঢাকা, সিলেট, কক্সবাজার)..." 
+            autocomplete="off"
+            spellcheck="false"
+            required
+            aria-label="Search district or city in Bangladesh"
+          >
+          <button type="button" id="clearSearchBtn" class="clear-btn" aria-label="Clear search text" title="Clear">
+            <i data-lucide="x" class="btn-icon-sm"></i>
+          </button>
+        </div>
+        <button type="submit" class="btn btn-primary search-submit-btn" aria-label="Submit search">
+          <span>অনুসন্ধান</span>
+          <i data-lucide="arrow-right" class="btn-icon"></i>
+        </button>
+      </form>
+
+      <!-- Action Controls -->
+      <div class="header-actions">
+        <!-- Geolocation Button -->
+        <button id="locationBtn" class="icon-btn" title="Use My Current Location" aria-label="Use My Location">
+          <i data-lucide="crosshair" class="icon"></i>
+          <span class="btn-tooltip">My Location</span>
+        </button>
+
+        <!-- Unit Toggle (°C / °F) -->
+        <div class="unit-toggle" role="group" aria-label="Temperature unit selector">
+          <button type="button" class="unit-btn active" id="unitCelsius" data-unit="metric" aria-pressed="true">°C</button>
+          <button type="button" class="unit-btn" id="unitFahrenheit" data-unit="imperial" aria-pressed="false">°F</button>
+        </div>
+
+        <!-- Theme Toggle (Dark / Light) -->
+        <button id="themeToggleBtn" class="icon-btn theme-toggle-btn" title="Toggle Dark / Light Theme" aria-label="Toggle Theme">
+          <i data-lucide="sun" class="icon sun-icon"></i>
+          <i data-lucide="moon" class="icon moon-icon"></i>
+          <span class="btn-tooltip">Toggle Mode</span>
+        </button>
+
+        <!-- API Settings Modal Button -->
+        <button id="settingsModalBtn" class="icon-btn" title="OpenWeather API Key Settings" aria-label="API Settings">
+          <i data-lucide="settings" class="icon"></i>
+          <span class="btn-tooltip">API Key</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Quick City Shortcuts & Recent Searches -->
+    <nav class="chips-bar" aria-label="Bangladesh divisions and popular cities">
+      <div class="chips-scroll-track" id="quickCitiesTrack">
+        <span class="chips-label"><i data-lucide="map" class="icon-xs"></i> Divisions:</span>
+        <button type="button" class="city-chip active" data-city="Dhaka">Dhaka (ঢাকা)</button>
+        <button type="button" class="city-chip" data-city="Chattogram">Chattogram (চট্টগ্রাম)</button>
+        <button type="button" class="city-chip" data-city="Sylhet">Sylhet (সিলেট)</button>
+        <button type="button" class="city-chip" data-city="Rajshahi">Rajshahi (রাজশাহী)</button>
+        <button type="button" class="city-chip" data-city="Khulna">Khulna (খুলনা)</button>
+        <button type="button" class="city-chip" data-city="Barishal">Barishal (বরিশাল)</button>
+        <button type="button" class="city-chip" data-city="Rangpur">Rangpur (রংপুর)</button>
+        <button type="button" class="city-chip" data-city="Mymensingh">Mymensingh (ময়মনসিংহ)</button>
+        <button type="button" class="city-chip" data-city="Cox's Bazar">Cox's Bazar (কক্সবাজার)</button>
+        <button type="button" class="city-chip" data-city="Gazipur">Gazipur (গাজীপুর)</button>
+        <button type="button" class="city-chip" data-city="Cumilla">Cumilla (কুমিল্লা)</button>
+      </div>
+      <div class="recent-searches-container" id="recentSearchesContainer" style="display: none;">
+        <span class="chips-label"><i data-lucide="history" class="icon-xs"></i> Recent:</span>
+        <div class="recent-chips" id="recentChips"></div>
+      </div>
+    </nav>
+
+    <!-- Status Banner / Offline or Demo Notice -->
+    <div class="status-banner" id="statusBanner" style="display: none;">
+      <div class="status-banner-content">
+        <i data-lucide="info" class="status-banner-icon" id="statusBannerIcon"></i>
+        <span id="statusBannerText">Displaying live demo forecast data.</span>
+      </div>
+      <button type="button" class="status-banner-close" id="statusBannerClose" aria-label="Dismiss banner">
+        <i data-lucide="x" class="icon-xs"></i>
+      </button>
+    </div>
+
+    <!-- Main Weather Dashboard -->
+    <main class="weather-dashboard" id="weatherDashboard">
+
+      <!-- Left Column: Hero Current Weather & Highlights Grid -->
+      <section class="dashboard-left">
+
+        <!-- Hero Current Weather Card -->
+        <div class="glass-card hero-weather-card" id="heroCard">
+          <div class="hero-card-header">
+            <div class="location-details">
+              <div class="city-country-row">
+                <i data-lucide="map-pin" class="location-pin-icon" aria-hidden="true"></i>
+                <h1 class="city-name" id="cityName">Dhaka</h1>
+                <span class="country-badge" id="countryBadge">BD</span>
+              </div>
+              <p class="current-date-time" id="currentDateTime">Sunday, Sep 6 • 12:45 PM</p>
+            </div>
+            <div class="condition-badge" id="conditionBadge">
+              <span class="pulse-dot"></span>
+              <span id="conditionText">Warm & Humid</span>
+            </div>
+          </div>
+
+          <div class="hero-card-body">
+            <div class="temp-icon-group">
+              <div class="weather-icon-hero-wrapper" id="heroIconWrapper">
+                <!-- Dynamic SVG weather icon injected here -->
+                <div class="animated-weather-icon" id="heroWeatherIcon">
+                  <i data-lucide="cloud-sun" class="weather-hero-svg"></i>
+                </div>
+              </div>
+              <div class="temp-display-wrapper">
+                <div class="main-temperature">
+                  <span class="temp-value" id="currentTemp">22</span>
+                  <span class="temp-unit" id="tempUnitSymbol">°C</span>
+                </div>
+                <p class="feels-like-text">
+                  Feels like <span class="highlight-val" id="feelsLikeTemp">23°C</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="hero-card-summary">
+              <div class="high-low-pill">
+                <span class="hl-item"><i data-lucide="arrow-up" class="hl-icon high"></i> High: <strong id="heroTempMax">25°C</strong></span>
+                <span class="hl-divider">•</span>
+                <span class="hl-item"><i data-lucide="arrow-down" class="hl-icon low"></i> Low: <strong id="heroTempMin">18°C</strong></span>
+              </div>
+              <p class="weather-description-sentence" id="weatherDescriptionSentence">
+                Scattered clouds throughout the day with a gentle breeze.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Key Metrics & Weather Highlights Grid -->
+        <div class="metrics-section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i data-lucide="bar-chart-2" class="section-title-icon"></i>
+              Weather Highlights
+            </h2>
+            <span class="section-meta" id="lastUpdatedTime">Updated just now</span>
+          </div>
+
+          <div class="metrics-grid">
+            <!-- Metric 1: Humidity -->
+            <div class="glass-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Humidity</span>
+                <div class="metric-icon-circle blue">
+                  <i data-lucide="droplet"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-number" id="humidityVal">68</span>
+                <span class="metric-sub">%</span>
+              </div>
+              <div class="metric-progress-wrapper">
+                <div class="metric-progress-bar" id="humidityBar" style="width: 68%;"></div>
+              </div>
+              <span class="metric-status-tag" id="humidityStatus">Comfortable</span>
+            </div>
+
+            <!-- Metric 2: Wind Speed & Direction -->
+            <div class="glass-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Wind Status</span>
+                <div class="metric-icon-circle cyan">
+                  <i data-lucide="wind"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-number" id="windSpeedVal">14</span>
+                <span class="metric-sub" id="windSpeedUnit">km/h</span>
+              </div>
+              <div class="wind-direction-row">
+                <div class="compass-pointer" id="compassPointer" style="transform: rotate(45deg);">
+                  <i data-lucide="navigation"></i>
+                </div>
+                <span class="wind-dir-text" id="windDirText">NE (45°)</span>
+              </div>
+            </div>
+
+            <!-- Metric 3: Air Pressure -->
+            <div class="glass-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Pressure</span>
+                <div class="metric-icon-circle violet">
+                  <i data-lucide="gauge"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-number" id="pressureVal">1014</span>
+                <span class="metric-sub">hPa</span>
+              </div>
+              <span class="metric-status-tag" id="pressureStatus">Normal Sea Level</span>
+            </div>
+
+            <!-- Metric 4: Visibility -->
+            <div class="glass-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Visibility</span>
+                <div class="metric-icon-circle emerald">
+                  <i data-lucide="eye"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-number" id="visibilityVal">10.0</span>
+                <span class="metric-sub" id="visibilityUnit">km</span>
+              </div>
+              <span class="metric-status-tag" id="visibilityStatus">Clear View</span>
+            </div>
+
+            <!-- Metric 5: UV Index -->
+            <div class="glass-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">UV Index</span>
+                <div class="metric-icon-circle amber">
+                  <i data-lucide="sun"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-number" id="uvVal">5</span>
+                <span class="metric-sub">/ 11+</span>
+              </div>
+              <div class="metric-progress-wrapper">
+                <div class="metric-progress-bar amber-bg" id="uvBar" style="width: 45%;"></div>
+              </div>
+              <span class="metric-status-tag" id="uvStatus">Moderate Risk</span>
+            </div>
+
+            <!-- Metric 6: Cloud Cover / Precip -->
+            <div class="glass-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Cloud Cover</span>
+                <div class="metric-icon-circle slate">
+                  <i data-lucide="cloud"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-number" id="cloudCoverVal">40</span>
+                <span class="metric-sub">%</span>
+              </div>
+              <div class="metric-progress-wrapper">
+                <div class="metric-progress-bar slate-bg" id="cloudCoverBar" style="width: 40%;"></div>
+              </div>
+              <span class="metric-status-tag" id="cloudCoverStatus">Scattered Clouds</span>
+            </div>
+
+            <!-- Metric 7: Sunrise -->
+            <div class="glass-card metric-card sun-metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Sunrise</span>
+                <div class="metric-icon-circle orange">
+                  <i data-lucide="sunrise"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-time" id="sunriseTime">06:22 AM</span>
+              </div>
+              <span class="metric-status-tag" id="sunriseCountdown">Dawn completed</span>
+            </div>
+
+            <!-- Metric 8: Sunset -->
+            <div class="glass-card metric-card sun-metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Sunset</span>
+                <div class="metric-icon-circle purple">
+                  <i data-lucide="sunset"></i>
+                </div>
+              </div>
+              <div class="metric-value-row">
+                <span class="metric-time" id="sunsetTime">07:48 PM</span>
+              </div>
+              <span class="metric-status-tag" id="sunsetCountdown">Dusk in 7 hours</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 24-Hour Hourly Forecast Slider -->
+        <section class="hourly-section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i data-lucide="clock" class="section-title-icon"></i>
+              Hourly Forecast
+            </h2>
+            <div class="slider-nav-btns">
+              <button type="button" class="slider-btn" id="hourlySlideLeft" aria-label="Scroll left">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <button type="button" class="slider-btn" id="hourlySlideRight" aria-label="Scroll right">
+                <i data-lucide="chevron-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="hourly-forecast-track" id="hourlyForecastTrack">
+            <!-- Dynamic Hourly Forecast Cards Injected by JS -->
+          </div>
+        </section>
+
+      </section>
+
+      <!-- Right Column: 5-Day Extended Forecast -->
+      <section class="dashboard-right">
+        <div class="glass-card forecast-5day-container">
+          <div class="section-header">
+            <h2 class="section-title">
+              <i data-lucide="calendar-days" class="section-title-icon"></i>
+              5-Day Forecast
+            </h2>
+            <span class="section-badge">Next 5 Days</span>
+          </div>
+
+          <div class="forecast-cards-list" id="forecastCardsList">
+            <!-- 5-Day Forecast Cards Injected by JS -->
+          </div>
+
+          <!-- Weather Advice / Quick Tips Widget -->
+          <div class="weather-advice-box" id="weatherAdviceBox">
+            <div class="advice-header">
+              <i data-lucide="lightbulb" class="advice-icon"></i>
+              <span class="advice-title">Daily Outlook</span>
+            </div>
+            <p class="advice-text" id="weatherAdviceText">
+              Great day for outdoor activities. Moderate UV index, so sunscreen is recommended during peak daylight hours.
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Loading Skeleton Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+      <div class="loading-spinner-box">
+        <div class="spinner-ring"></div>
+        <i data-lucide="cloud-sun" class="spinner-icon"></i>
+        <p class="spinner-text">Fetching Live Weather...</p>
+      </div>
+    </div>
+
+    <!-- Error / Not Found Modal -->
+    <div class="modal-backdrop" id="errorModal" style="display: none;">
+      <div class="glass-modal error-modal-content">
+        <div class="modal-icon-header error">
+          <i data-lucide="alert-circle" class="modal-hero-icon"></i>
+        </div>
+        <h3 class="modal-title" id="errorModalTitle">City Not Found</h3>
+        <p class="modal-message" id="errorModalMsg">
+          We couldn't locate weather details for the specified location. Please check the spelling and try again.
+        </p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-primary" id="errorModalCloseBtn">Got it</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Key Settings Modal -->
+    <div class="modal-backdrop" id="settingsModal" style="display: none;">
+      <div class="glass-modal settings-modal-content">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <i data-lucide="key" class="settings-modal-icon"></i>
+            <h3 class="modal-title">OpenWeather API Configuration</h3>
+          </div>
+          <button type="button" class="icon-btn-sm" id="closeSettingsBtn" aria-label="Close modal">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <p class="settings-intro">
+            SkyPulse works out of the box with built-in live demo simulation. For real-time global weather, you can provide your free <strong>OpenWeatherMap API key</strong>.
+          </p>
+
+          <form id="apiSettingsForm" class="settings-form">
+            <div class="form-group">
+              <label for="apiKeyInput" class="form-label">OpenWeather API Key (V2.5)</label>
+              <div class="input-with-icon">
+                <i data-lucide="lock" class="input-icon"></i>
+                <input 
+                  type="password" 
+                  id="apiKeyInput" 
+                  class="form-input" 
+                  placeholder="Paste your 32-character API key..." 
+                  autocomplete="off"
+                >
+                <button type="button" id="toggleKeyVisibilityBtn" class="visibility-btn" aria-label="Toggle key visibility">
+                  <i data-lucide="eye" id="toggleKeyIcon"></i>
+                </button>
+              </div>
+              <small class="form-hint">
+                Don't have a key? Get one for free at <a href="https://openweathermap.org/api" target="_blank" rel="noopener noreferrer">openweathermap.org</a>.
+              </small>
+            </div>
+
+            <div class="api-status-box" id="apiKeyStatusBox">
+              <div class="api-status-indicator" id="apiStatusIndicator"></div>
+              <span id="apiStatusText">Using smart demo simulation mode</span>
+            </div>
+
+            <div class="modal-actions-row">
+              <button type="button" class="btn btn-secondary" id="clearApiKeyBtn">Clear Key</button>
+              <button type="submit" class="btn btn-primary" id="saveApiKeyBtn">Save & Apply</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <p>© 2026 <strong>আবহবার্তা (AbohoBarta)</strong> • বাংলাদেশের আধুনিক ও দ্রুততম আবহাওয়া পোর্টাল।</p>
+      </div>
+      <div class="footer-right">
+        <span class="footer-badge">Powered by OpenWeatherMap & Bangladesh Meteorological Data</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript Module -->
+  <script src="app.js"></script>
+</body>
+</html>
